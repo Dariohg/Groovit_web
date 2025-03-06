@@ -1,3 +1,4 @@
+// src/presentation/components/auth/ProtectedRoute.jsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Center, Spinner } from '@chakra-ui/react';
@@ -9,6 +10,7 @@ import { Center, Spinner } from '@chakra-ui/react';
 const ProtectedRoute = () => {
     const { isAuthenticated, loading } = useAuth();
 
+    // Si está cargando, muestra un spinner
     if (loading) {
         return (
             <Center h="100vh">
@@ -23,7 +25,13 @@ const ProtectedRoute = () => {
         );
     }
 
-    return isAuthenticated() ? <Outlet /> : <Navigate to="/login" />;
+    // Si no está autenticado, redirige al login
+    if (!isAuthenticated()) {
+        return <Navigate to="/login" />;
+    }
+
+    // Si está autenticado, renderiza las rutas hijas
+    return <Outlet />;
 };
 
 export default ProtectedRoute;

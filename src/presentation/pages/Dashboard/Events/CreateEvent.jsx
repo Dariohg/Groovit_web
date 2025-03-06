@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
     Box,
     Container,
@@ -34,9 +34,12 @@ import {
     Image,
     FormErrorMessage,
     Select,
+    Progress,
 } from '@chakra-ui/react';
 import { FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaImage, FaMusic, FaMoneyBillWave, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../../infrastructure/api/apiClient';
+import { useAuth } from '../../../context/AuthContext';
 
 // Pasos del formulario
 const steps = [
@@ -51,12 +54,31 @@ const CreateEvent = () => {
     const toast = useToast();
     const navigate = useNavigate();
     const fileInputRef = useRef();
+    const { user, isAuthenticated } = useAuth();
 
+    /*// Verificar autenticación al cargar
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            toast({
+                title: 'Acceso denegado',
+                description: 'Debes iniciar sesión para crear eventos',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            navigate('/login');
+        }
+    }, [isAuthenticated, navigate, toast]);
+*/
     // Estado para manejar los pasos
     const { activeStep, setActiveStep } = useSteps({
         index: 0,
         count: steps.length,
     });
+
+    // Estado para controlar el envío del formulario
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Estado para el formulario
     const [formData, setFormData] = useState({
@@ -75,6 +97,44 @@ const CreateEvent = () => {
     // Estado para los errores
     const [errors, setErrors] = useState({});
 
+    // Efecto para cargar datos de un evento pendiente si existe
+    useEffect(() => {
+        const pendingEvent = sessionStorage.getItem('pendingEvent');
+        if (pendingEvent) {
+            try {
+                const savedData = JSON.parse(pendingEvent);
+                // Actualizar el formulario con los datos guardados, excepto la imagen
+                setFormData(prev => ({
+                    ...prev,
+                    ...savedData,
+                    imagen: prev.imagen,
+                    imagenPreview: prev.imagenPreview
+                }));
+
+                toast({
+                    title: 'Datos recuperados',
+                    description: 'Se han recuperado los datos del evento que estabas creando',
+                    status: 'info',
+                    duration: 3000,
+                    isClosable: true,
+                });
+
+                // Limpiar el storage
+                sessionStorage.removeItem('pendingEvent');
+            } catch (error) {
+                console.error('Error loading pending event data:', error);
+            }
+        }
+    }, [toast]);
+
+    // Efecto para actualizar lugares_disponibles cuando cambia capacidad
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            lugares_disponibles: prev.capacidad
+        }));
+    }, [formData.capacidad]);
+
     // Manejador de cambios para los campos
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -90,14 +150,6 @@ const CreateEvent = () => {
             ...prev,
             [id]: value
         }));
-
-        // Si se cambia la capacidad, actualizar lugares disponibles
-        if (id === 'capacidad') {
-            setFormData(prev => ({
-                ...prev,
-                lugares_disponibles: value
-            }));
-        }
     };
 
     // Manejador para la imagen
@@ -144,7 +196,7 @@ const CreateEvent = () => {
             case 1: // Detalles
                 if (!formData.fecha) newErrors.fecha = 'La fecha es requerida';
                 if (formData.capacidad <= 0) newErrors.capacidad = 'La capacidad debe ser mayor a 0';
-                if (formData.precio <= 0) newErrors.precio = 'El precio debe ser mayor a 0';
+                if (formData.precio < 0) newErrors.precio = 'El precio debe ser mayor o igual a 0';
                 break;
             case 2: // Ubicación
                 if (!formData.ubicacion.trim()) newErrors.ubicacion = 'La ubicación es requerida';
@@ -155,6 +207,22 @@ const CreateEvent = () => {
             default:
                 break;
         }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Validar todo el formulario
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!formData.titulo.trim()) newErrors.titulo = 'El título es requerido';
+        if (!formData.descripcion.trim()) newErrors.descripcion = 'La descripción es requerida';
+        if (!formData.fecha) newErrors.fecha = 'La fecha es requerida';
+        if (formData.capacidad <= 0) newErrors.capacidad = 'La capacidad debe ser mayor a 0';
+        if (formData.precio < 0) newErrors.precio = 'El precio debe ser mayor o igual a 0';
+        if (!formData.ubicacion.trim()) newErrors.ubicacion = 'La ubicación es requerida';
+        if (!formData.genero.trim()) newErrors.genero = 'El género musical es requerido';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -172,21 +240,172 @@ const CreateEvent = () => {
         setActiveStep(activeStep - 1);
     };
 
+    // Verificar el token antes de enviar
+    const verifyToken = () => {
+        const token = localStorage.getItem('auth_token');
+        console.log('Token de autenticación:', token);
+
+        if (!token) {
+            toast({
+                title: 'Error de autenticación',
+                description: 'No hay token de autenticación. Por favor, inicia sesión nuevamente.',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+            return false;
+        }
+
+        // Verificar si el token está activo
+        if (!isAuthenticated()) {
+            toast({
+                title: 'Sesión expirada',
+                description: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+            });
+            return false;
+        }
+
+        return true;
+    };
+
     // Enviar el formulario
-    const handleSubmit = () => {
-        // Aquí iría la lógica para enviar el formulario al servidor
-        // Por ahora solo simularemos un envío exitoso
+    const handleSubmit = async () => {
+        if (!validateForm()) {
+            toast({
+                title: 'Error en el formulario',
+                description: 'Por favor corrige los errores antes de continuar',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
 
-        toast({
-            title: 'Evento creado',
-            description: 'El evento se ha creado exitosamente',
-            status: 'success',
-            duration: 3000,
-            isClosable: true,
-        });
+        // Verificar token antes de enviar
+        if (!verifyToken()) {
+            // Guardar datos en sessionStorage antes de redirigir
+            sessionStorage.setItem('pendingEvent', JSON.stringify({
+                ...formData,
+                imagenPreview: null // No guardar la vista previa, sólo los datos
+            }));
+            navigate('/login');
+            return;
+        }
 
-        // Redirigir al dashboard
-        navigate('/dashboard');
+        setIsSubmitting(true);
+        setUploadProgress(0);
+
+        try {
+            // Crear FormData para enviar datos y archivo
+            const formDataToSend = new FormData();
+
+            // Agregar datos del evento
+            formDataToSend.append('titulo', formData.titulo);
+            formDataToSend.append('descripcion', formData.descripcion);
+            formDataToSend.append('fecha', formData.fecha);
+            formDataToSend.append('capacidad', formData.capacidad);
+            formDataToSend.append('lugares_disponibles', formData.lugares_disponibles);
+            formDataToSend.append('precio', formData.precio);
+            formDataToSend.append('ubicacion', formData.ubicacion);
+            formDataToSend.append('genero', formData.genero);
+
+            // Agregar imagen si existe
+            if (formData.imagen) {
+                formDataToSend.append('imagen', formData.imagen);
+            }
+
+            const config = {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': localStorage.getItem('auth_token')
+                },
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
+                }
+            };
+
+            // Imprimir datos que se van a enviar para debug
+            console.log('Enviando datos:', {
+                titulo: formData.titulo,
+                descripcion: formData.descripcion,
+                fecha: formData.fecha,
+                capacidad: formData.capacidad,
+                lugares_disponibles: formData.lugares_disponibles,
+                precio: formData.precio,
+                ubicacion: formData.ubicacion,
+                genero: formData.genero,
+                imagen: formData.imagen ? formData.imagen.name : 'Sin imagen'
+            });
+            console.log('Config:', config);
+
+            // Enviar datos al servidor
+            const response = await apiClient.post('/eventos', formDataToSend, config);
+
+            console.log('Respuesta del servidor:', response.data);
+
+            // Mostrar mensaje de éxito
+            toast({
+                title: 'Evento creado',
+                description: 'El evento se ha creado exitosamente',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+
+            // Redirigir al dashboard
+            navigate('/dashboard');
+        } catch (error) {
+            console.error('Error al crear evento:', error);
+
+            // Preparar mensaje de error
+            let errorMessage = 'Ha ocurrido un error al crear el evento';
+
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.data && error.data.message) {
+                errorMessage = error.data.message;
+            }
+
+            // Verificar si es un error de autenticación
+            if (error.status === 401) {
+                errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+
+                // Guardar datos en sessionStorage antes de redirigir
+                sessionStorage.setItem('pendingEvent', JSON.stringify({
+                    ...formData,
+                    imagenPreview: null // No guardar la vista previa, sólo los datos
+                }));
+
+                // Informar al usuario antes de redirigir
+                toast({
+                    title: 'Sesión expirada',
+                    description: errorMessage,
+                    status: 'warning',
+                    duration: 5000,
+                    isClosable: true,
+                });
+
+                // Limpiar token y redirigir a login
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                setTimeout(() => navigate('/login'), 1500);
+                return; // Salir para no mostrar otro toast
+            }
+
+            toast({
+                title: 'Error',
+                description: errorMessage,
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Renderizar el paso actual
@@ -525,8 +744,7 @@ const CreateEvent = () => {
                         <Flex
                             mt={8}
                             p={4}
-                            bg="green.900"
-                            bgOpacity={0.2}
+                            bg="rgba(0, 128, 0, 0.1)"
                             color="green.300"
                             borderRadius="md"
                             align="center"
@@ -556,6 +774,7 @@ const CreateEvent = () => {
                 leftIcon={<Icon as={FaArrowLeft} />}
                 onClick={() => navigate('/dashboard')}
                 _hover={{ bg: 'whiteAlpha.200', color: 'groovit.purpleLight' }}
+                isDisabled={isSubmitting}
             >
                 Volver al Dashboard
             </Button>
@@ -604,7 +823,34 @@ const CreateEvent = () => {
                     borderColor="whiteAlpha.100"
                     minH="400px"
                 >
-                    {renderStep()}
+                    {isSubmitting ? (
+                        <Flex
+                            direction="column"
+                            align="center"
+                            justify="center"
+                            h="400px"
+                            textAlign="center"
+                        >
+                            <Heading size="md" mb={6}>Creando evento...</Heading>
+                            <Box w="80%" maxW="400px" mb={4}>
+                                <Progress
+                                    value={uploadProgress}
+                                    colorScheme="purple"
+                                    size="lg"
+                                    borderRadius="md"
+                                    hasStripe
+                                    isAnimated
+                                />
+                            </Box>
+                            <Text color="gray.400">
+                                {uploadProgress < 100
+                                    ? `Subiendo archivos (${uploadProgress}%)`
+                                    : 'Procesando información...'}
+                            </Text>
+                        </Flex>
+                    ) : (
+                        renderStep()
+                    )}
                 </Box>
 
                 {/* Botones de navegación */}
@@ -612,7 +858,7 @@ const CreateEvent = () => {
                     <Button
                         variant="outline"
                         colorScheme="purple"
-                        isDisabled={activeStep === 0}
+                        isDisabled={activeStep === 0 || isSubmitting}
                         onClick={handleBack}
                         size="lg"
                     >
@@ -626,6 +872,7 @@ const CreateEvent = () => {
                             size="lg"
                             bg="groovit.purple"
                             _hover={{ bg: 'groovit.purpleLight' }}
+                            isDisabled={isSubmitting}
                         >
                             Siguiente
                         </Button>
@@ -637,6 +884,8 @@ const CreateEvent = () => {
                             bg="groovit.purple"
                             _hover={{ bg: 'groovit.purpleLight' }}
                             leftIcon={<FaCheck />}
+                            isLoading={isSubmitting}
+                            loadingText="Creando evento..."
                         >
                             Crear Evento
                         </Button>

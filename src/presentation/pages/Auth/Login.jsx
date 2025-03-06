@@ -19,8 +19,15 @@ import {
     Alert,
     AlertIcon,
     AlertDescription,
+    VStack,
+    HStack,
+    Image,
+    ScaleFade,
+    useBreakpointValue,
+    Divider,
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon, ArrowBackIcon } from '@chakra-ui/icons';
+import { FaMusic, FaRegCheckCircle } from 'react-icons/fa';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -34,6 +41,9 @@ const Login = () => {
     const toast = useToast();
     const navigate = useNavigate();
     const { login } = useAuth();
+
+    const boxSize = useBreakpointValue({ base: '100%', md: '90%', lg: '1000px' });
+    const isDesktop = useBreakpointValue({ base: false, lg: true });
 
     const validateForm = () => {
         const newErrors = {};
@@ -85,7 +95,9 @@ const Login = () => {
             py={8}
             display="flex"
             alignItems="center"
+            justifyContent="center"
             position="relative"
+            bgGradient="linear(to-b, groovit.background, groovit.purpleDark)"
         >
             {/* Botón de regreso */}
             <IconButton
@@ -102,137 +114,199 @@ const Login = () => {
                 _hover={{ bg: 'whiteAlpha.200', color: 'groovit.purpleLight' }}
             />
 
-            <Container
-                maxW="md"
-                py={{ base: 6, md: 10 }}
-                px={{ base: 4, sm: 8 }}
-            >
-                <Stack spacing={8}>
-                    <Stack spacing={6} textAlign="center">
-                        <Link as={RouterLink} to="/" alignSelf="center">
-                            <Text
-                                fontSize="3xl"
-                                fontWeight="extrabold"
-                                className="gradient-text"
-                                letterSpacing="tight"
-                                mb={2}
+            <ScaleFade initialScale={0.9} in={true}>
+                <Box
+                    w={boxSize}
+                    bg="groovit.surface"
+                    borderRadius="xl"
+                    overflow="hidden"
+                    boxShadow="0 10px 30px -10px rgba(0, 0, 0, 0.5)"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                >
+                    <Flex direction={{ base: 'column', lg: 'row' }}>
+                        {/* Lado izquierdo - Imagen decorativa para desktop */}
+                        {isDesktop && (
+                            <Box
+                                w="40%"
+                                bg="groovit.purpleDark"
+                                position="relative"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                                p={8}
                             >
-                                Groovit
-                            </Text>
-                        </Link>
-                        <Heading fontSize="2xl" fontWeight="bold">
-                            Inicia sesión en tu cuenta
-                        </Heading>
-                        <Text fontSize="md" color="gray.500">
-                            Accede a todos los eventos musicales ✌️
-                        </Text>
-                    </Stack>
+                                <Box
+                                    position="absolute"
+                                    top={0}
+                                    left={0}
+                                    right={0}
+                                    bottom={0}
+                                    bgGradient="linear(to-br, groovit.purpleDark, groovit.purple)"
+                                    opacity={0.9}
+                                    zIndex={0}
+                                />
+                                <Box
+                                    position="absolute"
+                                    top={0}
+                                    left={0}
+                                    right={0}
+                                    bottom={0}
+                                    bgImage="url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')"
+                                    bgSize="cover"
+                                    bgPosition="center"
+                                    opacity={0.15}
+                                    zIndex={0}
+                                />
+                                <VStack spacing={8} zIndex={1} textAlign="center">
+                                    <FaMusic size="80px" color="#fff" />
+                                    <Heading color="white" size="xl">GROOVIT</Heading>
+                                    <Text color="white" fontSize="lg" fontWeight="medium">
+                                        Accede a tu cuenta para gestionar eventos musicales
+                                    </Text>
+                                    <Box>
+                                        <VStack spacing={4} align="start">
+                                            {[
+                                                'Crea eventos musicales',
+                                                'Administra tus ventas',
+                                                'Analiza estadísticas',
+                                                'Conecta con tu audiencia'
+                                            ].map((feature, index) => (
+                                                <HStack key={index}>
+                                                    <FaRegCheckCircle color="#C77DFF" />
+                                                    <Text color="white">{feature}</Text>
+                                                </HStack>
+                                            ))}
+                                        </VStack>
+                                    </Box>
+                                </VStack>
+                            </Box>
+                        )}
 
-                    {apiError && (
-                        <Alert status="error" borderRadius="md" bg="red.900" color="white">
-                            <AlertIcon color="red.300" />
-                            <AlertDescription>{apiError}</AlertDescription>
-                        </Alert>
-                    )}
+                        {/* Lado derecho - Formulario */}
+                        <Box w={{ base: '100%', lg: '60%' }} p={{ base: 6, md: 10 }}>
+                            <VStack spacing={6} align="start" w="full">
+                                <Box w="full" textAlign="center" mb={4}>
+                                    {!isDesktop && (
+                                        <Text
+                                            fontSize="3xl"
+                                            fontWeight="extrabold"
+                                            className="gradient-text"
+                                            letterSpacing="tight"
+                                            mb={2}
+                                        >
+                                            Groovit
+                                        </Text>
+                                    )}
+                                    <Heading size="lg">Iniciar Sesión</Heading>
+                                    <Text color="gray.400" mt={2}>
+                                        Accede a tu cuenta para comenzar a gestionar eventos
+                                    </Text>
+                                </Box>
 
-                    <Box
-                        py={8}
-                        px={6}
-                        bg="groovit.surface"
-                        boxShadow="xl"
-                        borderRadius="xl"
-                        borderWidth="1px"
-                        borderColor="whiteAlpha.200"
-                    >
-                        <form onSubmit={handleSubmit}>
-                            <Stack spacing={5}>
-                                <FormControl isInvalid={!!errors.username} isRequired>
-                                    <FormLabel htmlFor="username">Nombre de usuario</FormLabel>
-                                    <Input
-                                        id="username"
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="Tu nombre de usuario"
-                                        bg="whiteAlpha.50"
-                                        borderColor="whiteAlpha.200"
-                                        _hover={{ borderColor: 'groovit.purple' }}
-                                        _focus={{ borderColor: 'groovit.purpleLight', boxShadow: '0 0 0 1px #C77DFF' }}
-                                    />
-                                    <FormErrorMessage>{errors.username}</FormErrorMessage>
-                                </FormControl>
+                                {apiError && (
+                                    <Alert status="error" borderRadius="md" bg="red.900" color="white" w="full">
+                                        <AlertIcon color="red.300" />
+                                        <AlertDescription>{apiError}</AlertDescription>
+                                    </Alert>
+                                )}
 
-                                <FormControl isInvalid={!!errors.password} isRequired>
-                                    <FormLabel htmlFor="password">Contraseña</FormLabel>
-                                    <InputGroup>
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Tu contraseña"
-                                            bg="whiteAlpha.50"
-                                            borderColor="whiteAlpha.200"
-                                            _hover={{ borderColor: 'groovit.purple' }}
-                                            _focus={{ borderColor: 'groovit.purpleLight', boxShadow: '0 0 0 1px #C77DFF' }}
-                                        />
-                                        <InputRightElement>
-                                            <IconButton
-                                                size="sm"
-                                                variant="ghost"
-                                                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                                                onClick={() => setShowPassword(!showPassword)}
+                                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                                    <VStack spacing={5} w="full">
+                                        <FormControl isInvalid={!!errors.username} isRequired>
+                                            <FormLabel htmlFor="username">Nombre de usuario</FormLabel>
+                                            <Input
+                                                id="username"
+                                                type="text"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                placeholder="Tu nombre de usuario"
+                                                bg="whiteAlpha.50"
+                                                borderColor="whiteAlpha.200"
+                                                _hover={{ borderColor: 'groovit.purple' }}
+                                                _focus={{ borderColor: 'groovit.purpleLight', boxShadow: '0 0 0 1px #C77DFF' }}
+                                                size="lg"
                                             />
-                                        </InputRightElement>
-                                    </InputGroup>
-                                    <FormErrorMessage>{errors.password}</FormErrorMessage>
-                                </FormControl>
+                                            <FormErrorMessage>{errors.username}</FormErrorMessage>
+                                        </FormControl>
 
-                                <Link
-                                    alignSelf="flex-end"
-                                    fontSize="sm"
-                                    color="groovit.purpleLight"
-                                    _hover={{ color: 'groovit.purple' }}
-                                    as={RouterLink}
-                                    to="/forgot-password"
-                                >
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
+                                        <FormControl isInvalid={!!errors.password} isRequired>
+                                            <FormLabel htmlFor="password">Contraseña</FormLabel>
+                                            <InputGroup size="lg">
+                                                <Input
+                                                    id="password"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    placeholder="Tu contraseña"
+                                                    bg="whiteAlpha.50"
+                                                    borderColor="whiteAlpha.200"
+                                                    _hover={{ borderColor: 'groovit.purple' }}
+                                                    _focus={{ borderColor: 'groovit.purpleLight', boxShadow: '0 0 0 1px #C77DFF' }}
+                                                />
+                                                <InputRightElement h="full" pr={2}>
+                                                    <IconButton
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                                        icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                    />
+                                                </InputRightElement>
+                                            </InputGroup>
+                                            <FormErrorMessage>{errors.password}</FormErrorMessage>
+                                        </FormControl>
 
-                                <Button
-                                    type="submit"
-                                    colorScheme="purple"
-                                    bg="groovit.purple"
-                                    _hover={{ bg: 'groovit.purpleLight' }}
-                                    size="lg"
-                                    fontSize="md"
-                                    isLoading={isLoading}
-                                    loadingText="Iniciando sesión..."
-                                    w="full"
-                                    mt={4}
-                                >
-                                    Iniciar sesión
-                                </Button>
-                            </Stack>
-                        </form>
-                    </Box>
+                                        <Link
+                                            alignSelf="flex-end"
+                                            fontSize="sm"
+                                            color="groovit.purpleLight"
+                                            _hover={{ color: 'groovit.purple' }}
+                                            as={RouterLink}
+                                            to="/forgot-password"
+                                        >
+                                            ¿Olvidaste tu contraseña?
+                                        </Link>
 
-                    <Flex justifyContent="center" fontSize="sm">
-                        <Text color="gray.500">¿No tienes una cuenta?</Text>
-                        <Link
-                            as={RouterLink}
-                            to="/register"
-                            color="groovit.purpleLight"
-                            _hover={{ color: 'groovit.purple' }}
-                            fontWeight="semibold"
-                            ml={1}
-                        >
-                            Regístrate
-                        </Link>
+                                        <Button
+                                            type="submit"
+                                            bg="groovit.purple"
+                                            color="white"
+                                            _hover={{ bg: 'groovit.purpleLight', transform: 'translateY(-2px)' }}
+                                            _active={{ bg: 'groovit.purpleDark' }}
+                                            size="lg"
+                                            fontSize="md"
+                                            isLoading={isLoading}
+                                            loadingText="Iniciando sesión..."
+                                            w="full"
+                                            mt={6}
+                                            height="56px"
+                                        >
+                                            Iniciar Sesión
+                                        </Button>
+                                    </VStack>
+                                </form>
+
+                                <Divider borderColor="whiteAlpha.200" my={6} />
+
+                                <Flex justifyContent="center" fontSize="sm" w="full">
+                                    <Text color="gray.500">¿No tienes una cuenta?</Text>
+                                    <Link
+                                        as={RouterLink}
+                                        to="/register"
+                                        color="groovit.purpleLight"
+                                        _hover={{ color: 'groovit.purple' }}
+                                        fontWeight="semibold"
+                                        ml={1}
+                                    >
+                                        Regístrate
+                                    </Link>
+                                </Flex>
+                            </VStack>
+                        </Box>
                     </Flex>
-                </Stack>
-            </Container>
+                </Box>
+            </ScaleFade>
         </Box>
     );
 };

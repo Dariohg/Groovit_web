@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import App from './App'
 import HomePage from './presentation/pages/Home'
 import Login from './presentation/pages/Auth/Login'
@@ -55,26 +55,27 @@ const router = createBrowserRouter([
                 path: 'about',
                 element: <AboutPage />
             },
-            // El dashboard y sus rutas relacionadas
-            {
-                path: 'dashboard',
-                element: <Dashboard />
-            },
-            {
-                path: 'dashboard/events/create',
-                element: <CreateEvent />
-            },
-            {
-                path: 'activity',
-                element: <ActivityPage />
-            },
-            {
-                path: 'recommendations',
-                element: <RecommendationsPage />
-            },
+            // Rutas protegidas
             {
                 element: <ProtectedRoute />,
                 children: [
+                    // Dashboard y sus sub-rutas
+                    {
+                        path: 'dashboard',
+                        element: <Dashboard />
+                    },
+                    {
+                        path: 'dashboard/events/create',
+                        element: <CreateEvent />
+                    },
+                    {
+                        path: 'activity',
+                        element: <ActivityPage />
+                    },
+                    {
+                        path: 'recommendations',
+                        element: <RecommendationsPage />
+                    },
                     {
                         path: 'profile',
                         element: <ProfilePage />

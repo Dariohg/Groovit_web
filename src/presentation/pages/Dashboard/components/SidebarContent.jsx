@@ -18,7 +18,7 @@ import {
     FaQuestionCircle,
     FaSignOutAlt
 } from 'react-icons/fa';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 
 // Enlaces de navegación del sidebar
@@ -78,10 +78,21 @@ const NavItem = ({ item, onClose }) => {
 
 const SidebarContent = ({ onClose }) => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     const handleLogout = () => {
+        // Eliminar el token y los datos del usuario
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+
+        // Llamar a la función logout del contexto
         logout();
+
+        // Cerrar el drawer en móvil si está abierto
         if (onClose) onClose();
+
+        // Redirigir a la página de inicio
+        navigate('/');
     };
 
     return (

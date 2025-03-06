@@ -1,3 +1,4 @@
+// src/infrastructure/api/apiClient.js
 import axios from 'axios';
 
 // Configuración base del cliente axios
@@ -32,7 +33,8 @@ apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('auth_token');
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            // Enviar el token sin el prefijo Bearer
+            config.headers.Authorization = token;
         }
         return config;
     },
